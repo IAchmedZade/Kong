@@ -113,11 +113,13 @@ int main()
 			if (!shouldExplode)
 			{
 				for (auto& pos : banana.getShittyBoundingPixels())
-					if (level.isBelowSkyline(pos))
+				{
+					if (level.isBelowSkyline(pos) || (!playerToThrow && player0.isHit(pos)) || (playerToThrow && player1.isHit(pos)))
 					{
 						shouldExplode = true;
 						break;
 					}
+				}
 			}
 			if (shouldExplode)
 			{

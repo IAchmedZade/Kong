@@ -21,3 +21,15 @@ void Player::setPosition(const sf::Vector2f& pos)
 {
 	mySprite.setPosition({ pos.x , pos.y - scaleFactor * mySprite.getTextureRect().size.y });
 }
+
+bool Player::isHit(const sf::Vector2f& pos)
+{
+	// Ellipsoid kurwa
+	// (x/a)^2 + (y/b)^2 = 1
+	// a = x_t, b = y_t for texture size = (x_t, y_t)
+	const float x = pos.x - mySprite.getPosition().x;
+	const float y = pos.y - mySprite.getPosition().y;
+	const float x_t = mySprite.getTextureRect().size.x * scaleFactor;
+	const float y_t = mySprite.getTextureRect().size.y * scaleFactor;
+	return (x / x_t) * (x / x_t) + (y / y_t) * (y / y_t) < 1;
+}
