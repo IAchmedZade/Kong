@@ -32,8 +32,8 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 	box.setFillColor(sf::Color::Yellow);
 	box.setOutlineColor(sf::Color::White);
 	box.setOrigin({ 0,0 });
-	
-	for (int i = 0; i < desiredNumberOfTiles; ++i)
+		
+	while(1)
 	{
 		uint32_t randomWidth = (uint32_t)(width * distributionBetweenTwentyAndFortyPercent(generator));
 		if (totalSum + randomWidth < width)
@@ -47,14 +47,20 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 		}
 		else
 		{
-			std::cout << "Offset " << offset << " random width " << randomWidth << "\nwidth - offset " << width - offset << '\n';
-			const float skyscraperHeight = distributionBetweenSixtyAndEightyPercent(generator);
-			box.setSize({ (float)(width - offset) - 1.f, 1.0f * height });
-			box.setPosition({ (float)offset,  0.f * height });
-			std::cout << "Box dimensions " << box.getSize().x << " " << box.getSize().y << " and position " <<
-				box.getPosition().x << " " << box.getPosition().y << '\n';
-			skyscrapers.push_back(box);
+			if ((float)(width - offset) < 20)
+			{
+				skyscrapers.back().setPosition({ skyscrapers.back().getPosition().x + width - totalSum,
+					skyscrapers.back().getPosition().y });
+			}
+			else
+			{
+				const float skyscraperHeight = distributionBetweenSixtyAndEightyPercent(generator);
+				box.setSize({ (float)(width - offset), skyscraperHeight * height });
+				box.setPosition({ (float)offset,  (1.f - skyscraperHeight) * height });
+				skyscrapers.push_back(box);
+			}
 			break;
+			
 		}
 	}
 	return skyscrapers;
