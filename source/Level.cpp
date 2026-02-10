@@ -18,7 +18,7 @@ std::uniform_real_distribution<> distributionForHeight(0.4, 0.5);
 
 
 // Implementation here
-std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, const uint32_t height, const uint32_t desiredNumberOfTiles)
+void Level::generateSkyline(const uint32_t width, const uint32_t height, const uint32_t desiredNumberOfTiles)
 {
 	const float inverseOfNumberOfTiles = 1 / (float)desiredNumberOfTiles;
 	std::uniform_real_distribution<> distributionBetweenTwentyAndFortyPercent(inverseOfNumberOfTiles / 2, 3 * inverseOfNumberOfTiles / 2);
@@ -29,13 +29,13 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 	uint32_t offset = 0;
 	sf::RectangleShape box({0,0 });
 	box.setOutlineThickness(1.8f);
-	box.setFillColor(sf::Color::Yellow);
+	box.setFillColor(sf::Color(165, 42, 42));
 	box.setOutlineColor(sf::Color::White);
 	box.setOrigin({ 0,0 });
 		
 	while(1)
 	{
-		uint32_t randomWidth = (uint32_t)(width * distributionBetweenTwentyAndFortyPercent(generator));
+		uint32_t randomWidth = width / desiredNumberOfTiles; //(uint32_t)(width * distributionBetweenTwentyAndFortyPercent(generator));
 		if (totalSum + randomWidth < width)
 		{
 			totalSum += randomWidth;
@@ -65,7 +65,6 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 	}
 	this->mySkyline.clear();
 	this->mySkyline = skyscrapers;
-	return skyscrapers;
 }
 
 
@@ -83,11 +82,27 @@ bool Level::isBelowSkyline(const sf::Vector2f& pos)
 }
 
 
+void Level::draw(sf::RenderTarget & target)
+{
+	for (auto& box : mySkyline) target.draw(box);
+}
 
 
-
-
-
-
-
-
+std::vector<sf::Vector2f> Level::getPlayerPositions() const
+{
+	if (mySkyline.size() > 3)
+	{
+		// TODO Make random appearance? 
+		// Allow movement?
+		auto& firstBox = mySkyline[1];
+		auto& secondBox = mySkyline[mySkyline.size() - 2];
+		const float magicXOffset = 0.25f;
+		return 
+		{
+			{firstBox.getPosition().x + magicXOffset * firstBox.getSize().x , firstBox.getPosition().y},			
+			{secondBox.getPosition().x + (1 - magicXOffset) * secondBox.getSize().x , secondBox.getPosition().y}
+		};
+	}
+	// BAD!! Oh kurwa! Oh Bober!
+	return { {0,0}, {0,0} };
+}

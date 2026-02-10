@@ -1,32 +1,44 @@
 #include "Banana.h"
 
 #include <sfml/Graphics/RenderTarget.hpp>
+#include <sfml/graphics.hpp>
 #include <vector>
 
 
 
-Banana::Banana(sf::Vector2f position, std::shared_ptr<sf::Texture> texture)
+Banana::Banana(sf::Vector2f position, std::shared_ptr<sf::Texture> texture, uint8_t id)
 	: pMyTexture(texture)
 	, mySprite(*texture)
+	, id(id)
 {
 
 	mySprite.setTexture(*pMyTexture);
 	mySprite.setPosition(position);
 	mySprite.setOrigin((sf::Vector2f)mySprite.getTextureRect().getCenter());
+	mySprite.setScale({ 0.5f, 0.5f });
 }
 
 void Banana::update()
 {
-	constexpr float gravity = 0.03f;
+	if (!explodingFrame)
+	{
+		constexpr float gravity = .81f;
 
-	myVelocity.y += gravity;
+		myVelocity.y += gravity;
 
-	mySprite.move(myVelocity);
-	mySprite.rotate(sf::degrees(2.0f));
+		mySprite.move(myVelocity);
+		mySprite.rotate(sf::degrees(20.0f));
+	}	
 }
 
 void Banana::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
+	sf::CircleShape explosion(explodingFrame);
+	explosion.setFillColor(sf::Color::Red);
+	explosion.setOrigin({ (float) explodingFrame, (float) explodingFrame }); 
+	explosion.setPosition(mySprite.getPosition());
+
+	target.draw(explosion);
 	target.draw(mySprite, states);
 }
 

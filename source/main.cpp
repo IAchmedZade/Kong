@@ -9,15 +9,19 @@
 #include <thread>
 #include "Level.h"
 #include <chrono>
+#include <memory>
 
 #include "Banana.h"
 #include "Player.h"
 
-
-
+static bool isOutsideOfWindow(const sf::RenderWindow& window, const sf::Vector2f& pos)
+{
+	return pos.x < 0 || pos.x > window.getSize().x || pos.y < 0 || pos.y > window.getSize().y;
+}
 
 
 std::list<Banana> bananas;
+uint8_t globalBananaId = 0;
 int main()
 {
 	const auto bananaTexture = std::make_shared<sf::Texture>();
@@ -33,16 +37,22 @@ int main()
 		return -1;
 	}
 
-	const uint32_t width = 800;
-	const uint32_t height = 600;
+	const uint32_t width = sf::VideoMode::getDesktopMode().size.x;
+	const uint32_t height = sf::VideoMode::getDesktopMode().size.y;
 	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong");
 
 	Level level;
+	level.generateSkyline(width, height, 20);
 
-	Player player1({ width / 4, height / 2 }, playerTexture);
-	Player player2({ 3 * width / 4, height / 2 }, playerTexture);
-	std::vector<sf::RectangleShape> skyline = level.generateSkyline(width, height, 20);
-	window.setFramerateLimit(60);
+	std::vector<sf::Vector2f> playerPositions = level.getPlayerPositions();
+
+	Player player0(playerPositions[0], playerTexture, true);
+	Player player1(playerPositions[1], playerTexture, false);
+	uint8_t playerToThrow = 0;
+	
+	const uint32_t framerate = 60;
+	window.setFramerateLimit(framerate);
+	
 	while (window.isOpen())
 	{
 		const std::optional<sf::Event> optionalevent = window.pollEvent();
@@ -62,41 +72,67 @@ int main()
 				if (event->code == sf::Keyboard::Key::B)
 				{
 					const auto mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+					if (playerToThrow)
+					{
+						const auto mouseToPlayer = mousePos - player1.getPosition();
+						const float distanceModulator = sqrt(mouseToPlayer.length()) / 1000.0f;
 
-					const auto mouseToPlayer = mousePos - player1.getPosition();
-					const float distanceModulator = sqrt(mouseToPlayer.length()) / 1000.0f;
+						bananas.emplace_back(player1.getPosition(), bananaTexture, globalBananaId++);
+						bananas.back().setVelocity(mouseToPlayer * distanceModulator);
+					}
+					else
+					{
+						const auto mouseToPlayer = mousePos - player0.getPosition();
+						const float distanceModulator = sqrt(mouseToPlayer.length()) / 1000.0f;
 
-					bananas.emplace_back(player1.getPosition(), bananaTexture);
-					bananas.back().setVelocity(mouseToPlayer * distanceModulator);
+						bananas.emplace_back(player0.getPosition(), bananaTexture, globalBananaId++);
+						bananas.back().setVelocity(mouseToPlayer * distanceModulator);
+					}
+					playerToThrow = playerToThrow ? 0 : 1;
 				}
 				else if (event->code == sf::Keyboard::Key::R)
 				{
-					skyline.clear();
-					skyline = level.generateSkyline(width, height, 20);
-				}
+					level.generateSkyline(width, height, 20);
+					auto newPositions = level.getPlayerPositions();
+					player0.setPosition(newPositions[0]);
+					player1.setPosition(newPositions[1]);
+				}			
 			}
 		}
 		
 		window.clear();
-		for (auto& box : skyline)
-			window.draw(box);
+		level.draw(window);
+		window.draw(player0);
 		window.draw(player1);
-		window.draw(player2);
-		for (Banana& banana : bananas)
+		auto it = bananas.begin();
+		for (; it != bananas.end(); )
 		{
+			Banana& banana = *it;
 			banana.update();
-			// TODO Shitty banas re-appear blyat! Need to remove from list kurwa!
-			bool shouldRender = true;
-			for (auto& pos : banana.getShittyBoundingPixels())
-				if (level.isBelowSkyline(pos))
-				{
-					std::cout << "Banana below skyline detected!! " << pos.x << " " << pos.y << '\n';
-					shouldRender = false;
-					break;
-				}
-			if (shouldRender)
-				window.draw(banana);
+			bool shouldExplode = banana.explodingFrame > 0;
+			if (!shouldExplode)
+			{
+				for (auto& pos : banana.getShittyBoundingPixels())
+					if (level.isBelowSkyline(pos))
+					{
+						shouldExplode = true;
+						break;
+					}
+			}
+			if (shouldExplode)
+			{
+				banana.explodingFrame++;
+			}			
+			
+			window.draw(banana);
+			if (banana.explodingFrame > framerate || isOutsideOfWindow(window,banana.getPosition()))
+				it = bananas.erase(it);
+			else
+				++it;
 		}
+
+		
+
 		window.display();
 	}
 }

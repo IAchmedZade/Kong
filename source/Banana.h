@@ -10,15 +10,19 @@
 class Banana final : public sf::Drawable
 {
 public:
-	Banana(sf::Vector2f position, std::shared_ptr<sf::Texture> texture);
+	Banana(sf::Vector2f position, std::shared_ptr<sf::Texture> texture, uint8_t id);
 
 	void update();
-	void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+	void draw(sf::RenderTarget& target, sf::RenderStates states) const override;	
 
 	void setVelocity(sf::Vector2f velocity) { myVelocity = velocity; }
 	auto getVelocity() const { return myVelocity; }
 	sf::Vector2f getPosition() const { return mySprite.getPosition(); }
 	std::vector<sf::Vector2f> getShittyBoundingPixels() const;
+
+	uint8_t explodingFrame = 0;
+	uint8_t id = 0;
+
 
 private:
 	std::shared_ptr<sf::Texture> pMyTexture;
