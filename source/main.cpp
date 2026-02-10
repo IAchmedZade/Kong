@@ -130,7 +130,7 @@ int main()
 			{
 				for (auto& pos : banana.getShittyBoundingPixels())
 				{
-					if (level.isBelowSkyline(pos) || (!playerToThrow && player0.checkIfHitAndDecrementHealth(pos)) || (playerToThrow && player1.checkIfHitAndDecrementHealth(pos)))
+					if (level.isBelowSkyline(pos) || (!playerToThrow && player0.checkIfHitAndDecrementHealth(pos, window)) || (playerToThrow && player1.checkIfHitAndDecrementHealth(pos, window)))
 					{
 						player0Health.setString(std::to_string(player0.getHealth()));
 						player1Health.setString(std::to_string(player1.getHealth()));
@@ -145,7 +145,7 @@ int main()
 			}			
 			
 			window.draw(banana);
-			if (banana.explodingFrame > framerate || isOutsideOfWindow(window,banana.getPosition()))
+			if (banana.explodingFrame > 2* framerate || isOutsideOfWindow(window,banana.getPosition()))
 				it = bananas.erase(it);
 			else
 				++it;
