@@ -9,6 +9,8 @@
 #include <thread>
 #include <chrono>
 
+#include "Banana.h"
+
 std::random_device rd;  // Will be used to obtain a seed for the random number engine
 std::mt19937 generator(rd()); // Standard mersenne_twister_engine seeded with rd()
 const float minWidthSkyscraper = 0.1;
@@ -51,9 +53,16 @@ std::vector<uint32_t> generateSkyline(const uint32_t width, const uint32_t heigh
 	return rands;
 }
 
-
+std::list<Banana> bananas;
 int main()
 {
+	const auto bananaTexture = std::make_shared<sf::Texture>();
+	if (!bananaTexture->loadFromFile("assets/banana.png"))
+	{
+		std::cerr << "Failed to load texture.\n";
+		return -1;
+	}
+
 	const uint32_t width = 800;
 	const uint32_t height = 600;
 	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong");
@@ -95,6 +104,14 @@ int main()
 				float delta = e.getIf<sf::Event::MouseWheelScrolled>()->delta;
 				
 			}
+			if (auto event = e.getIf<sf::Event::KeyReleased>())
+			{
+				if (event->code == sf::Keyboard::Key::B)
+				{
+					bananas.emplace_back(sf::Vector2f(50.0f, 140.0f), bananaTexture);
+					bananas.back().setVelocity({ 3.0f, -2.0f });
+				}
+			}
 		}
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R))
 		{
@@ -117,6 +134,11 @@ int main()
 		window.draw(rect2);
 		for (auto& box : skyline)
 			window.draw(box);
+		for (Banana& banana : bananas)
+		{
+			banana.update();
+			window.draw(banana);
+		}
 		window.display();
 	}
 }
