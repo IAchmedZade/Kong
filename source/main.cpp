@@ -45,6 +45,8 @@ int main()
 	rect2.setPosition({ 3 * width / 4, height / 2 });
 	std::vector<sf::RectangleShape> skyline = level.generateSkyline(width, height, 20);
 	
+
+	window.setFramerateLimit(60);
 	while (window.isOpen())
 	{
 		const std::optional<sf::Event> optionalevent = window.pollEvent();
@@ -73,6 +75,7 @@ int main()
 				}
 			}
 		}
+		
 		window.clear();
 		window.draw(rect);
 		window.draw(rect2);
@@ -81,7 +84,8 @@ int main()
 		for (Banana& banana : bananas)
 		{
 			banana.update();
-			window.draw(banana);
+			if (!level.isBelowSkyline(banana.getPosition()))				
+				window.draw(banana);
 		}
 		window.display();
 	}

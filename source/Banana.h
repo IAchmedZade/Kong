@@ -4,6 +4,7 @@
 #include <sfml/System/Vector2.hpp>
 
 #include <memory>
+#include <vector>
 
 
 class Banana final : public sf::Drawable
@@ -16,6 +17,8 @@ public:
 
 	void setVelocity(sf::Vector2f velocity) { myVelocity = velocity; }
 	auto getVelocity() const { return myVelocity; }
+	sf::Vector2f getPosition() const { return mySprite.getPosition(); }
+	std::vector<sf::Vector2f> getShittyBoundingPixels() const;
 
 private:
 	std::shared_ptr<sf::Texture> pMyTexture;

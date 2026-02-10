@@ -63,5 +63,31 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 			
 		}
 	}
+	this->mySkyline.clear();
+	this->mySkyline = skyscrapers;
 	return skyscrapers;
 }
+
+
+bool Level::isBelowSkyline(const sf::Vector2f& pos)
+{
+	for (auto& rect : mySkyline)
+	{
+		const sf::Vector2f rectPos = rect.getPosition();
+		const sf::Vector2f rectSize = rect.getSize();
+		if (rectPos.x <= pos.x && rectPos.x + rectSize.x > pos.x
+			&& rectPos.y >= pos.y)
+			return false;
+	}
+	return true;
+}
+
+
+
+
+
+
+
+
+
+
