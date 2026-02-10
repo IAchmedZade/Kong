@@ -14,7 +14,7 @@ void printVector(const std::vector<T>& vec)
 
 std::random_device rd;  // Will be used to obtain a seed for the random number engine
 std::mt19937 generator(rd()); // Standard mersenne_twister_engine seeded with rd()
-std::uniform_real_distribution<> distributionBetweenSixtyAndEightyPercent(0.4, 0.8);
+std::uniform_real_distribution<> distributionForHeight(0.4, 0.5);
 
 
 // Implementation here
@@ -32,14 +32,14 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 	box.setFillColor(sf::Color::Yellow);
 	box.setOutlineColor(sf::Color::White);
 	box.setOrigin({ 0,0 });
-	
-	for (int i = 0; i < desiredNumberOfTiles; ++i)
+		
+	while(1)
 	{
 		uint32_t randomWidth = (uint32_t)(width * distributionBetweenTwentyAndFortyPercent(generator));
 		if (totalSum + randomWidth < width)
 		{
 			totalSum += randomWidth;
-			const float skyscraperHeight = distributionBetweenSixtyAndEightyPercent(generator);
+			const float skyscraperHeight = distributionForHeight(generator);
 			box.setSize({ (float)randomWidth, skyscraperHeight * height });
 			box.setPosition({ (float)offset, (1 - skyscraperHeight) * height });
 			offset += randomWidth;
@@ -47,15 +47,47 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 		}
 		else
 		{
-			std::cout << "Offset " << offset << " random width " << randomWidth << "\nwidth - offset " << width - offset << '\n';
-			const float skyscraperHeight = distributionBetweenSixtyAndEightyPercent(generator);
-			box.setSize({ (float)(width - offset) - 1.f, 1.0f * height });
-			box.setPosition({ (float)offset,  0.f * height });
-			std::cout << "Box dimensions " << box.getSize().x << " " << box.getSize().y << " and position " <<
-				box.getPosition().x << " " << box.getPosition().y << '\n';
-			skyscrapers.push_back(box);
+			if ((float)(width - totalSum) < 0.05 * width)
+			{
+				skyscrapers.back().setSize({ skyscrapers.back().getSize().x + width - totalSum,
+					skyscrapers.back().getSize().y });
+			}
+			else
+			{
+				const float skyscraperHeight = distributionForHeight(generator);
+				box.setSize({ (float)(width - offset), skyscraperHeight * height });
+				box.setPosition({ (float)offset,  (1.f - skyscraperHeight) * height });
+				skyscrapers.push_back(box);
+			}
 			break;
+			
 		}
 	}
+	this->mySkyline.clear();
+	this->mySkyline = skyscrapers;
 	return skyscrapers;
 }
+
+
+bool Level::isBelowSkyline(const sf::Vector2f& pos)
+{
+	for (auto& rect : mySkyline)
+	{
+		const sf::Vector2f rectPos = rect.getPosition();
+		const sf::Vector2f rectSize = rect.getSize();
+		if (rectPos.x <= pos.x && rectPos.x + rectSize.x > pos.x
+			&& rectPos.y >= pos.y)
+			return false;
+	}
+	return true;
+}
+
+
+
+
+
+
+
+
+
+

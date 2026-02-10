@@ -42,7 +42,7 @@ int main()
 	Player player1({ width / 4, height / 2 }, playerTexture);
 	Player player2({ 3 * width / 4, height / 2 }, playerTexture);
 	std::vector<sf::RectangleShape> skyline = level.generateSkyline(width, height, 20);
-
+	window.setFramerateLimit(60);
 	while (window.isOpen())
 	{
 		const std::optional<sf::Event> optionalevent = window.pollEvent();
@@ -76,6 +76,7 @@ int main()
 				}
 			}
 		}
+		
 		window.clear();
 		for (auto& box : skyline)
 			window.draw(box);
@@ -84,7 +85,17 @@ int main()
 		for (Banana& banana : bananas)
 		{
 			banana.update();
-			window.draw(banana);
+			// TODO Shitty banas re-appear blyat! Need to remove from list kurwa!
+			bool shouldRender = true;
+			for (auto& pos : banana.getShittyBoundingPixels())
+				if (level.isBelowSkyline(pos))
+				{
+					std::cout << "Banana below skyline detected!! " << pos.x << " " << pos.y << '\n';
+					shouldRender = false;
+					break;
+				}
+			if (shouldRender)
+				window.draw(banana);
 		}
 		window.display();
 	}
