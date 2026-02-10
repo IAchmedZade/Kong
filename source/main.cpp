@@ -9,6 +9,48 @@
 #include <thread>
 #include <chrono>
 
+std::random_device rd;  // Will be used to obtain a seed for the random number engine
+std::mt19937 generator(rd()); // Standard mersenne_twister_engine seeded with rd()
+const float minWidthSkyscraper = 0.1;
+std::uniform_real_distribution<> distributionBetweenTwentyAndFortyPercent(minWidthSkyscraper,2 * minWidthSkyscraper);
+
+template<class T>
+void printVector(const std::vector<T>& vec)
+{
+	for (int i : vec) std::cout << i << " ";
+	std::cout << '\n';
+}
+
+std::vector<uint32_t> generateSkyline(const uint32_t width, const uint32_t height)
+{
+	std::vector<int> heightsAndWidths;
+	std::vector<uint32_t> rands;
+	uint32_t totalSum = 0;
+	for (int i = 0; i < 20; ++i)
+	{
+		uint32_t randomWidth = (uint32_t) (width * distributionBetweenTwentyAndFortyPercent(generator));
+		if (totalSum + randomWidth < width)
+		{
+			rands.push_back(randomWidth);
+			totalSum += randomWidth;
+		}
+		else
+		{			
+			if (float(width - totalSum) / width < minWidthSkyscraper)
+				rands[rands.size() - 1] += (width - totalSum);
+			else
+				rands.push_back(width - totalSum);
+			break;
+		}
+	}
+	std::cout << "Asserting that sum of widths equals width:\n";
+	uint32_t sum = 0;
+	for (int w : rands) sum += w;
+	std::cout << "Width " << width << " " << sum << '\n';
+	printVector(rands);
+	return rands;
+}
+
 
 int main()
 {
@@ -22,16 +64,59 @@ int main()
 
 
 	sf::RectangleShape rect2({ 100,100 });
-	rect2.setFillColor(sf::Color::Green);
+	rect2.setFillColor(sf::Color::Red);
 	rect2.setOrigin({ 50, 50 });
 	rect2.setPosition({ 3 * width / 4, height / 2 });
-
+	std::vector<uint32_t> widths = generateSkyline(width, height);
+	std::vector<sf::RectangleShape> skyline;
+	uint32_t offset = 0;
+	for (auto width : widths)
+	{
+		sf::RectangleShape box({ (float)width, 0.8 * height });
+		box.setOutlineThickness(0.8f);
+		box.setFillColor(sf::Color::Black);
+		box.setOutlineColor(sf::Color::White);
+		box.setPosition({ (float) offset, 0.2 * height });
+		offset += width;
+		skyline.push_back(box);
+	}
 
 	while (window.isOpen())
 	{
+		const std::optional<sf::Event> optionalevent = window.pollEvent();
+		if (optionalevent.has_value())
+		{
+			sf::Event e = optionalevent.value();
+			if (e.is<sf::Event::Closed>() || (e.is<sf::Event::KeyPressed>() && 
+				e.getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Escape))
+				return 0;			
+			if (e.is<sf::Event::MouseWheelScrolled>())
+			{
+				float delta = e.getIf<sf::Event::MouseWheelScrolled>()->delta;
+				
+			}
+		}
+		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R))
+		{
+			widths = generateSkyline(width, height);
+			skyline.clear();
+			offset = 0;
+			for (auto width : widths)
+			{
+				sf::RectangleShape box({ (float)width, 0.8 * height });
+				box.setOutlineThickness(0.8f);
+				box.setFillColor(sf::Color::Black);
+				box.setOutlineColor(sf::Color::White);
+				box.setPosition({ (float)offset, 0.2 * height });
+				offset += width;
+				skyline.push_back(box);
+			}
+		}
 		window.clear();
 		window.draw(rect);
 		window.draw(rect2);
+		for (auto& box : skyline)
+			window.draw(box);
 		window.display();
 	}
 }
