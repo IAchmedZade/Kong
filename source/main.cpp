@@ -84,7 +84,16 @@ int main()
 		for (Banana& banana : bananas)
 		{
 			banana.update();
-			if (!level.isBelowSkyline(banana.getPosition()))				
+			// TODO Shitty banas re-appear blyat! Need to remove from list kurwa!
+			bool shouldRender = true;
+			for (auto& pos : banana.getShittyBoundingPixels())
+				if (level.isBelowSkyline(pos))
+				{
+					std::cout << "Banana below skyline detected!! " << pos.x << " " << pos.y << '\n';
+					shouldRender = false;
+					break;
+				}
+			if (shouldRender)
 				window.draw(banana);
 		}
 		window.display();

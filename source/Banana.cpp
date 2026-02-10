@@ -32,7 +32,19 @@ void Banana::draw(sf::RenderTarget& target, sf::RenderStates states) const
 
 std::vector<sf::Vector2f> Banana::getShittyBoundingPixels() const
 {
-	mySprite.getRotation();
-	return {};
+	// Stupid circle need to do parabolas blyat!
+	const size_t numPixels = 100;
+	std::vector<sf::Vector2f> boundingPixels(numPixels, {0.f ,0.f});
+	const float radius = 10.f; // sqrtf(mySprite.getTextureRect().size.x * mySprite.getTextureRect().size.x / 6		+ mySprite.getTextureRect().size.y * mySprite.getTextureRect().size.y / 6);
+	
+	const sf::Vector2f spriteOrigin = mySprite.getPosition();
+	for (size_t i = 0; i < 100; ++i)
+	{
+		boundingPixels[i] = {
+			spriteOrigin.x + radius * cosf(2 * 3.14159 * i / numPixels),
+			spriteOrigin.y + radius * sinf(2 * 3.14159 * i / numPixels)
+		};
+	}
+	return boundingPixels;
 }
 

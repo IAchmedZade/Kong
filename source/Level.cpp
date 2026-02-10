@@ -14,7 +14,7 @@ void printVector(const std::vector<T>& vec)
 
 std::random_device rd;  // Will be used to obtain a seed for the random number engine
 std::mt19937 generator(rd()); // Standard mersenne_twister_engine seeded with rd()
-std::uniform_real_distribution<> distributionBetweenSixtyAndEightyPercent(0.4, 0.8);
+std::uniform_real_distribution<> distributionForHeight(0.4, 0.5);
 
 
 // Implementation here
@@ -39,7 +39,7 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 		if (totalSum + randomWidth < width)
 		{
 			totalSum += randomWidth;
-			const float skyscraperHeight = distributionBetweenSixtyAndEightyPercent(generator);
+			const float skyscraperHeight = distributionForHeight(generator);
 			box.setSize({ (float)randomWidth, skyscraperHeight * height });
 			box.setPosition({ (float)offset, (1 - skyscraperHeight) * height });
 			offset += randomWidth;
@@ -54,7 +54,7 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 			}
 			else
 			{
-				const float skyscraperHeight = distributionBetweenSixtyAndEightyPercent(generator);
+				const float skyscraperHeight = distributionForHeight(generator);
 				box.setSize({ (float)(width - offset), skyscraperHeight * height });
 				box.setPosition({ (float)offset,  (1.f - skyscraperHeight) * height });
 				skyscrapers.push_back(box);
