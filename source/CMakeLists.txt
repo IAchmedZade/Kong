@@ -3,6 +3,7 @@ set(
     main.cpp
     Banana.cpp
     Level.cpp
+    Player.cpp
 )
 
 set(

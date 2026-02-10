@@ -11,6 +11,7 @@
 #include <chrono>
 
 #include "Banana.h"
+#include "Player.h"
 
 
 
@@ -20,7 +21,13 @@ std::list<Banana> bananas;
 int main()
 {
 	const auto bananaTexture = std::make_shared<sf::Texture>();
+	const auto playerTexture = std::make_shared<sf::Texture>();
 	if (!bananaTexture->loadFromFile("assets/banana.png"))
+	{
+		std::cerr << "Failed to load texture.\n";
+		return -1;
+	}
+	if (!playerTexture->loadFromFile("assets/monkeyy.png"))
 	{
 		std::cerr << "Failed to load texture.\n";
 		return -1;
@@ -32,19 +39,10 @@ int main()
 
 	Level level;
 
-
-	sf::RectangleShape rect({ 100,100 });
-	rect.setFillColor(sf::Color::Green);
-	rect.setOrigin({ 50, 50 });
-	rect.setPosition({ width / 4, height / 2 });
-
-
-	sf::RectangleShape rect2({ 100,100 });
-	rect2.setFillColor(sf::Color::Red);
-	rect2.setOrigin({ 50, 50 });
-	rect2.setPosition({ 3 * width / 4, height / 2 });
+	Player player1({ width / 4, height / 2 }, playerTexture);
+	Player player2({ 3 * width / 4, height / 2 }, playerTexture);
 	std::vector<sf::RectangleShape> skyline = level.generateSkyline(width, height, 20);
-	
+
 	while (window.isOpen())
 	{
 		const std::optional<sf::Event> optionalevent = window.pollEvent();
@@ -63,8 +61,13 @@ int main()
 			{
 				if (event->code == sf::Keyboard::Key::B)
 				{
-					bananas.emplace_back(sf::Vector2f(50.0f, 140.0f), bananaTexture);
-					bananas.back().setVelocity({ 3.0f, -2.0f });
+					const auto mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+
+					const auto mouseToPlayer = mousePos - player1.getPosition();
+					const float distanceModulator = sqrt(mouseToPlayer.length()) / 1000.0f;
+
+					bananas.emplace_back(player1.getPosition(), bananaTexture);
+					bananas.back().setVelocity(mouseToPlayer * distanceModulator);
 				}
 				else if (event->code == sf::Keyboard::Key::R)
 				{
@@ -74,10 +77,10 @@ int main()
 			}
 		}
 		window.clear();
-		window.draw(rect);
-		window.draw(rect2);
 		for (auto& box : skyline)
 			window.draw(box);
+		window.draw(player1);
+		window.draw(player2);
 		for (Banana& banana : bananas)
 		{
 			banana.update();
