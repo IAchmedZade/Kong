@@ -14,7 +14,8 @@ public:
 
 	auto getPosition() const { return mySprite.getPosition(); }
 	void setPosition(const sf::Vector2f& pos);
-	bool isHit(const sf::Vector2f& pos);
+	bool checkIfHitAndDecrementHealth(const sf::Vector2f& pos);
+	int getHealth() { return myHealth; }
 	
 private:
 	int myHealth = 100;

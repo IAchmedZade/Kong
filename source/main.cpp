@@ -28,14 +28,16 @@ int main()
 	const auto playerTexture = std::make_shared<sf::Texture>();
 	if (!bananaTexture->loadFromFile("assets/banana.png"))
 	{
-		std::cerr << "Failed to load texture.\n";
+		std::cerr << "Failed to load banana texture.\n";
 		return -1;
 	}
 	if (!playerTexture->loadFromFile("assets/monkeyy.png"))
 	{
-		std::cerr << "Failed to load texture.\n";
+		std::cerr << "Failed to load mokey texture.\n";
 		return -1;
 	}
+
+	
 
 	const uint32_t width = sf::VideoMode::getDesktopMode().size.x;
 	const uint32_t height = sf::VideoMode::getDesktopMode().size.y;
@@ -48,6 +50,18 @@ int main()
 
 	Player player0(playerPositions[0], playerTexture, true);
 	Player player1(playerPositions[1], playerTexture, false);
+	
+	sf::Font font;
+	if (!font.openFromFile("./assets/comic.ttf"))
+	{
+		std::cerr << "Failed to open font file!\n";
+		return -1;
+	}
+	sf::Text player0Health(font, std::to_string(player0.getHealth()));
+	player0Health.setPosition({ 10.f, 20.f });
+	sf::Text player1Health(font, std::to_string(player1.getHealth()));
+	player1Health.setPosition({ width - 70.f, 20.f });
+
 	uint8_t playerToThrow = 0;
 	
 	const uint32_t framerate = 60;
@@ -103,7 +117,9 @@ int main()
 		window.clear();
 		level.draw(window);
 		window.draw(player0);
-		window.draw(player1);
+		window.draw(player1);		
+		window.draw(player0Health);
+		window.draw(player1Health);
 		auto it = bananas.begin();
 		for (; it != bananas.end(); )
 		{
@@ -114,8 +130,10 @@ int main()
 			{
 				for (auto& pos : banana.getShittyBoundingPixels())
 				{
-					if (level.isBelowSkyline(pos) || (!playerToThrow && player0.isHit(pos)) || (playerToThrow && player1.isHit(pos)))
+					if (level.isBelowSkyline(pos) || (!playerToThrow && player0.checkIfHitAndDecrementHealth(pos)) || (playerToThrow && player1.checkIfHitAndDecrementHealth(pos)))
 					{
+						player0Health.setString(std::to_string(player0.getHealth()));
+						player1Health.setString(std::to_string(player1.getHealth()));
 						shouldExplode = true;
 						break;
 					}
@@ -132,7 +150,7 @@ int main()
 			else
 				++it;
 		}
-
+		
 		
 
 		window.display();
