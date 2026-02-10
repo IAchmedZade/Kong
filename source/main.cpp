@@ -7,51 +7,14 @@
 #include <unordered_set>
 #include <algorithm>
 #include <thread>
+#include "Level.h"
 #include <chrono>
 
 #include "Banana.h"
 
-std::random_device rd;  // Will be used to obtain a seed for the random number engine
-std::mt19937 generator(rd()); // Standard mersenne_twister_engine seeded with rd()
-const float minWidthSkyscraper = 0.1;
-std::uniform_real_distribution<> distributionBetweenTwentyAndFortyPercent(minWidthSkyscraper,2 * minWidthSkyscraper);
 
-template<class T>
-void printVector(const std::vector<T>& vec)
-{
-	for (int i : vec) std::cout << i << " ";
-	std::cout << '\n';
-}
 
-std::vector<uint32_t> generateSkyline(const uint32_t width, const uint32_t height)
-{
-	std::vector<int> heightsAndWidths;
-	std::vector<uint32_t> rands;
-	uint32_t totalSum = 0;
-	for (int i = 0; i < 20; ++i)
-	{
-		uint32_t randomWidth = (uint32_t) (width * distributionBetweenTwentyAndFortyPercent(generator));
-		if (totalSum + randomWidth < width)
-		{
-			rands.push_back(randomWidth);
-			totalSum += randomWidth;
-		}
-		else
-		{			
-			if (float(width - totalSum) / width < minWidthSkyscraper)
-				rands[rands.size() - 1] += (width - totalSum);
-			else
-				rands.push_back(width - totalSum);
-			break;
-		}
-	}
-	std::cout << "Asserting that sum of widths equals width:\n";
-	uint32_t sum = 0;
-	for (int w : rands) sum += w;
-	std::cout << "Width " << width << " " << sum << '\n';
-	printVector(rands);
-	return rands;
-}
+
 
 std::list<Banana> bananas;
 int main()
@@ -66,6 +29,10 @@ int main()
 	const uint32_t width = 800;
 	const uint32_t height = 600;
 	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong");
+
+	Level level;
+
+
 	sf::RectangleShape rect({ 100,100 });
 	rect.setFillColor(sf::Color::Green);
 	rect.setOrigin({ 50, 50 });
@@ -76,20 +43,8 @@ int main()
 	rect2.setFillColor(sf::Color::Red);
 	rect2.setOrigin({ 50, 50 });
 	rect2.setPosition({ 3 * width / 4, height / 2 });
-	std::vector<uint32_t> widths = generateSkyline(width, height);
-	std::vector<sf::RectangleShape> skyline;
-	uint32_t offset = 0;
-	for (auto width : widths)
-	{
-		sf::RectangleShape box({ (float)width, 0.8 * height });
-		box.setOutlineThickness(0.8f);
-		box.setFillColor(sf::Color::Black);
-		box.setOutlineColor(sf::Color::White);
-		box.setPosition({ (float) offset, 0.2 * height });
-		offset += width;
-		skyline.push_back(box);
-	}
-
+	std::vector<sf::RectangleShape> skyline = level.generateSkyline(width, height, 20);
+	
 	while (window.isOpen())
 	{
 		const std::optional<sf::Event> optionalevent = window.pollEvent();
@@ -111,22 +66,11 @@ int main()
 					bananas.emplace_back(sf::Vector2f(50.0f, 140.0f), bananaTexture);
 					bananas.back().setVelocity({ 3.0f, -2.0f });
 				}
-			}
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::R))
-		{
-			widths = generateSkyline(width, height);
-			skyline.clear();
-			offset = 0;
-			for (auto width : widths)
-			{
-				sf::RectangleShape box({ (float)width, 0.8 * height });
-				box.setOutlineThickness(0.8f);
-				box.setFillColor(sf::Color::Black);
-				box.setOutlineColor(sf::Color::White);
-				box.setPosition({ (float)offset, 0.2 * height });
-				offset += width;
-				skyline.push_back(box);
+				else if (event->code == sf::Keyboard::Key::R)
+				{
+					skyline.clear();
+					skyline = level.generateSkyline(width, height, 20);
+				}
 			}
 		}
 		window.clear();
