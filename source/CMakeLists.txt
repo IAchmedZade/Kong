@@ -1,10 +1,15 @@
 set(
     SOURCES
     main.cpp
+    Level.cpp
 )
 
 set(
     HEADERS
+    Banana.h
+    Game.h
+    Level.h
+    Player.h
 )
 
 add_executable(
