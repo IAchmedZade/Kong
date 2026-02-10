@@ -47,10 +47,10 @@ std::vector<sf::RectangleShape> Level::generateSkyline(const uint32_t width, con
 		}
 		else
 		{
-			if ((float)(width - offset) < 20)
+			if ((float)(width - totalSum) < 0.05 * width)
 			{
-				skyscrapers.back().setPosition({ skyscrapers.back().getPosition().x + width - totalSum,
-					skyscrapers.back().getPosition().y });
+				skyscrapers.back().setSize({ skyscrapers.back().getSize().x + width - totalSum,
+					skyscrapers.back().getSize().y });
 			}
 			else
 			{
