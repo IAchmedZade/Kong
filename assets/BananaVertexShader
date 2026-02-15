@@ -1,0 +1,10 @@
+#version 120
+
+uniform vec2 textureSize;
+varying vec2 v_texCoord;
+
+void main() {
+    // Normalize texture coordinates from pixel space to 0-1 range
+    v_texCoord = gl_MultiTexCoord0.xy / textureSize;
+    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;
+}

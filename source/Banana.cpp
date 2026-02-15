@@ -2,20 +2,23 @@
 
 #include <sfml/Graphics/RenderTarget.hpp>
 #include <sfml/graphics.hpp>
+#include <SFML/Graphics/Shader.hpp>
 #include <vector>
 
 
 
-Banana::Banana(sf::Vector2f position, std::shared_ptr<sf::Texture> texture, uint8_t id)
+Banana::Banana(sf::Vector2f position, std::shared_ptr<sf::Texture> texture, uint8_t id, sf::Shader* shader)
 	: pMyTexture(texture)
 	, mySprite(*texture)
 	, id(id)
+	, shader(shader)
 {
 
 	mySprite.setTexture(*pMyTexture);
 	mySprite.setPosition(position);
 	mySprite.setOrigin((sf::Vector2f)mySprite.getTextureRect().getCenter());
 	mySprite.setScale({ 0.5f, 0.5f });
+
 }
 
 void Banana::update()
@@ -29,16 +32,15 @@ void Banana::update()
 		mySprite.move(myVelocity);
 		mySprite.rotate(sf::degrees(20.0f));
 	}	
+	else
+		mySprite.setRotation(sf::degrees(180));
 }
 
 void Banana::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
-	sf::CircleShape explosion(explodingFrame);
-	explosion.setFillColor(sf::Color::Red);
-	explosion.setOrigin({ (float) explodingFrame, (float) explodingFrame }); 
-	explosion.setPosition(mySprite.getPosition());
-
-	target.draw(explosion);
+	// Texture and textureSize uniforms are set once in main.cpp
+	shader->setUniform("explosion", (float) explodingFrame);
+	states.shader = shader;
 	target.draw(mySprite, states);
 }
 

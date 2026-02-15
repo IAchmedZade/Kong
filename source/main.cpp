@@ -24,6 +24,13 @@ std::list<Banana> bananas;
 uint8_t globalBananaId = 0;
 int main()
 {
+	const uint32_t width = sf::VideoMode::getDesktopMode().size.x;
+	const uint32_t height = sf::VideoMode::getDesktopMode().size.y;
+	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong");
+
+	const uint32_t framerate = 60;
+	window.setFramerateLimit(framerate);
+
 	const auto bananaTexture = std::make_shared<sf::Texture>();
 	const auto playerTexture = std::make_shared<sf::Texture>();
 	if (!bananaTexture->loadFromFile("assets/banana.png"))
@@ -37,11 +44,16 @@ int main()
 		return -1;
 	}
 
-	
+	sf::Shader bananaShader;
+	if (!bananaShader.loadFromFile("assets/BananaVertexShader", "assets/BananaFragmentShader"))
+	{
+		std::cerr << "Failed to load banana shader!\n";
+		return -1;
+	}
 
-	const uint32_t width = sf::VideoMode::getDesktopMode().size.x;
-	const uint32_t height = sf::VideoMode::getDesktopMode().size.y;
-	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong");
+	bananaShader.setUniform("texture", *bananaTexture);
+	bananaShader.setUniform("maxExplosion", (float) framerate);
+	bananaShader.setUniform("textureSize", sf::Vector2f(bananaTexture->getSize().x, bananaTexture->getSize().y));
 
 	Level level;
 	level.generateSkyline(width, height, 20);
@@ -57,15 +69,14 @@ int main()
 		std::cerr << "Failed to open font file!\n";
 		return -1;
 	}
-	sf::Text player0Health(font, std::to_string(player0.getHealth()));
+	sf::Text player0Health(font, std::to_string(player0.health));
 	player0Health.setPosition({ 10.f, 20.f });
-	sf::Text player1Health(font, std::to_string(player1.getHealth()));
+	sf::Text player1Health(font, std::to_string(player1.health));
 	player1Health.setPosition({ width - 70.f, 20.f });
 
 	uint8_t playerToThrow = 0;
+	int playerWon = -1;
 	
-	const uint32_t framerate = 60;
-	window.setFramerateLimit(framerate);
 	
 	while (window.isOpen())
 	{
@@ -83,7 +94,8 @@ int main()
 			}
 			if (auto event = e.getIf<sf::Event::KeyReleased>())
 			{
-				if (event->code == sf::Keyboard::Key::B)
+				// Player Won not decided blyat!
+				if (event->code == sf::Keyboard::Key::B && bananas.size() == 0 && playerWon == -1)
 				{
 					const auto mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 					if (playerToThrow)
@@ -91,7 +103,7 @@ int main()
 						const auto mouseToPlayer = mousePos - player1.getPosition();
 						const float distanceModulator = sqrt(mouseToPlayer.length()) / 1000.0f;
 
-						bananas.emplace_back(player1.getPosition(), bananaTexture, globalBananaId++);
+						bananas.emplace_back(player1.getPosition(), bananaTexture, globalBananaId++, &bananaShader);
 						bananas.back().setVelocity(mouseToPlayer * distanceModulator);
 					}
 					else
@@ -99,17 +111,22 @@ int main()
 						const auto mouseToPlayer = mousePos - player0.getPosition();
 						const float distanceModulator = sqrt(mouseToPlayer.length()) / 1000.0f;
 
-						bananas.emplace_back(player0.getPosition(), bananaTexture, globalBananaId++);
+						bananas.emplace_back(player0.getPosition(), bananaTexture, globalBananaId++, &bananaShader);
 						bananas.back().setVelocity(mouseToPlayer * distanceModulator);
 					}
 					playerToThrow = playerToThrow ? 0 : 1;
 				}
-				else if (event->code == sf::Keyboard::Key::R)
+				else if (event->code == sf::Keyboard::Key::R && playerWon != -1)
 				{
 					level.generateSkyline(width, height, 20);
-					auto newPositions = level.getPlayerPositions();
-					player0.setPosition(newPositions[0]);
-					player1.setPosition(newPositions[1]);
+					auto newPositions = level.getPlayerPositions();					
+					player0.setPosition(newPositions[0]);					
+					player1.setPosition(newPositions[1]);					
+					
+					player0.health = 100;
+					player1.health = 100;
+
+					playerWon = -1;
 				}			
 			}
 		}
@@ -120,39 +137,52 @@ int main()
 		window.draw(player1);		
 		window.draw(player0Health);
 		window.draw(player1Health);
-		auto it = bananas.begin();
-		for (; it != bananas.end(); )
+		if (playerWon == -1)
 		{
-			Banana& banana = *it;
-			banana.update();
-			bool shouldExplode = banana.explodingFrame > 0;
-			if (!shouldExplode)
+			auto it = bananas.begin();
+			for (; it != bananas.end(); )
 			{
-				for (auto& pos : banana.getShittyBoundingPixels())
+				Banana& banana = *it;
+				banana.update();
+				bool shouldExplode = banana.explodingFrame > 0;
+				if (!shouldExplode)
 				{
-					if (level.isBelowSkyline(pos) || (!playerToThrow && player0.checkIfHitAndDecrementHealth(pos, window)) || (playerToThrow && player1.checkIfHitAndDecrementHealth(pos, window)))
+					for (auto& pos : banana.getShittyBoundingPixels())
 					{
-						player0Health.setString(std::to_string(player0.getHealth()));
-						player1Health.setString(std::to_string(player1.getHealth()));
-						shouldExplode = true;
-						break;
+						if (level.isBelowSkyline(pos) ||
+							(!playerToThrow && player0.checkIfHitAndDecrementHealth(pos, window)) ||
+							(playerToThrow && player1.checkIfHitAndDecrementHealth(pos, window)))
+						{
+							player0Health.setString(std::to_string(player0.health));
+							player1Health.setString(std::to_string(player1.health));
+							shouldExplode = true;
+							break;
+						}
 					}
 				}
+				if (shouldExplode)
+				{
+					banana.explodingFrame++;
+				}
+
+				banana.draw(window, sf::RenderStates::Default);
+				if (banana.explodingFrame > framerate || isOutsideOfWindow(window, banana.getPosition()))
+				{
+					it = bananas.erase(it);
+					if (player0.health == 0) playerWon = 1;
+					else if (player1.health == 0) playerWon = 0;
+				}
+				else
+					++it;
 			}
-			if (shouldExplode)
-			{
-				banana.explodingFrame++;
-			}			
-			
-			window.draw(banana);
-			if (banana.explodingFrame > 2* framerate || isOutsideOfWindow(window,banana.getPosition()))
-				it = bananas.erase(it);
-			else
-				++it;
+		}
+		else
+		{
+			sf::Text winningText(font, "Winning kurwa player" + std::to_string(playerWon) + "\nPress R to reset kurwa!");
+			winningText.setPosition({ 3.f * width / 7, height / 4.f});
+			window.draw(winningText);
 		}
 		
-		
-
 		window.display();
 	}
 }

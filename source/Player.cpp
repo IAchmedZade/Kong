@@ -28,7 +28,8 @@ bool Player::checkIfHitAndDecrementHealth(const sf::Vector2f& pos, sf::RenderTar
 {
 	const float yDiff = pos.y - mySprite.getPosition().y;
 	const float xDiff = pos.x - mySprite.getPosition().x;
-	bool isHit = (yDiff > 0 && yDiff < mySprite.getTextureRect().size.y * scaleFactor && abs(xDiff) < mySprite.getTextureRect().size.x * scaleFactor);
-	if (isHit)	myHealth--;
+	bool isHit = (yDiff < mySprite.getTextureRect().size.y * scaleFactor && yDiff > 0
+		&& abs(xDiff) < mySprite.getTextureRect().size.x * scaleFactor);
+	if (isHit)	health-= 100;
 	return isHit;
 }

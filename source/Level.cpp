@@ -29,7 +29,7 @@ void Level::generateSkyline(const uint32_t width, const uint32_t height, const u
 	uint32_t offset = 0;
 	sf::RectangleShape box({0,0 });
 	box.setOutlineThickness(1.8f);
-	box.setFillColor(sf::Color(165, 42, 42));
+	box.setFillColor(sf::Color(42, 42, 42));
 	box.setOutlineColor(sf::Color::White);
 	box.setOrigin({ 0,0 });
 		

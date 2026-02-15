@@ -15,10 +15,10 @@ public:
 	auto getPosition() const { return mySprite.getPosition(); }
 	void setPosition(const sf::Vector2f& pos);
 	bool checkIfHitAndDecrementHealth(const sf::Vector2f& pos, sf::RenderTarget& target);
-	int getHealth() { return myHealth; }
+	int health = 100;
 	
 private:
-	int myHealth = 100;
+	
 	bool left;
 	const float scaleFactor = 0.5f;
 	std::shared_ptr<sf::Texture> pMyTexture;
