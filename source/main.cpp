@@ -197,8 +197,8 @@ int main()
 				{
 					shrooms.emplace_back(banana.getPosition(), pShroomTexture, 1, &shroomShader);
 					it = bananas.erase(it);
-					if (player0.health == 0) playerWon = 1;
-					else if (player1.health == 0) playerWon = 0;
+					if (player0.health <= 0) playerWon = 1;
+					else if (player1.health <= 0) playerWon = 0;
 				}
 				else
 					++it;
