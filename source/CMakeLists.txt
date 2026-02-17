@@ -18,7 +18,7 @@ add_executable(
     kong
     ${SOURCES}
     ${HEADERS}
-)
+ "Shroom.cpp" "Shroom.h")
 
 target_link_libraries(kong PRIVATE SFML::Graphics)
 

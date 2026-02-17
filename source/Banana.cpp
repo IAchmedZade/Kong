@@ -26,14 +26,15 @@ void Banana::update()
 	if (!explodingFrame)
 	{
 		constexpr float gravity = .81f;
-
 		myVelocity.y += gravity;
-
 		mySprite.move(myVelocity);
 		mySprite.rotate(sf::degrees(20.0f));
 	}	
 	else
+	{
 		mySprite.setRotation(sf::degrees(180));
+		mySprite.setScale({ .7f, .7f });
+	}
 }
 
 void Banana::draw(sf::RenderTarget& target, sf::RenderStates states) const

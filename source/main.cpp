@@ -13,6 +13,7 @@
 
 #include "Banana.h"
 #include "Player.h"
+#include "Shroom.h"
 
 static bool isOutsideOfWindow(const sf::RenderWindow& window, const sf::Vector2f& pos)
 {
@@ -33,6 +34,7 @@ int main()
 
 	const auto bananaTexture = std::make_shared<sf::Texture>();
 	const auto playerTexture = std::make_shared<sf::Texture>();
+	const auto pShroomTexture = std::make_shared<sf::Texture>();
 	if (!bananaTexture->loadFromFile("assets/banana.png"))
 	{
 		std::cerr << "Failed to load banana texture.\n";
@@ -43,6 +45,25 @@ int main()
 		std::cerr << "Failed to load mokey texture.\n";
 		return -1;
 	}
+	if (!pShroomTexture->loadFromFile("assets/Shroom.png"))
+	{
+		std::cerr << "Failed to load shroom texture.\n";
+		return -1;
+	}
+
+	sf::Shader shroomShader;
+	if (!shroomShader.loadFromFile("assets/ShroomVertexShader", "assets/ShroomFragmentShader"))
+	{
+		std::cerr << "Shrooms shader not loaded!\n";
+		return -1;
+	}
+	shroomShader.setUniform("texture", *pShroomTexture);
+	shroomShader.setUniform("textureSize", (sf::Vector2f)pShroomTexture->getSize());
+
+
+	std::vector<Shroom> shrooms;
+	//shrooms.emplace_back(sf::Vector2f{(float) width / 2,(float)height / 8 }, shroomTexture, 100, &shroomShader);
+
 
 	sf::Shader bananaShader;
 	if (!bananaShader.loadFromFile("assets/BananaVertexShader", "assets/BananaFragmentShader"))
@@ -95,7 +116,7 @@ int main()
 			if (auto event = e.getIf<sf::Event::KeyReleased>())
 			{
 				// Player Won not decided blyat!
-				if (event->code == sf::Keyboard::Key::B && bananas.size() == 0 && playerWon == -1)
+				if (event->code == sf::Keyboard::Key::B && playerWon == -1)
 				{
 					const auto mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
 					if (playerToThrow)
@@ -118,6 +139,11 @@ int main()
 				}
 				else if (event->code == sf::Keyboard::Key::R && playerWon != -1)
 				{
+					auto it = shrooms.begin();
+					for (; it != shrooms.end();)
+						it = shrooms.erase(it);
+					for (auto bit = bananas.begin(); bit != bananas.end();)
+						bit = bananas.erase(bit);
 					level.generateSkyline(width, height, 20);
 					auto newPositions = level.getPlayerPositions();					
 					player0.setPosition(newPositions[0]);					
@@ -139,6 +165,7 @@ int main()
 		window.draw(player1Health);
 		if (playerWon == -1)
 		{
+			// Deal with banana, baby mama drama!
 			auto it = bananas.begin();
 			for (; it != bananas.end(); )
 			{
@@ -168,12 +195,26 @@ int main()
 				banana.draw(window, sf::RenderStates::Default);
 				if (banana.explodingFrame > framerate || isOutsideOfWindow(window, banana.getPosition()))
 				{
+					shrooms.emplace_back(banana.getPosition(), pShroomTexture, 1, &shroomShader);
 					it = bananas.erase(it);
 					if (player0.health == 0) playerWon = 1;
 					else if (player1.health == 0) playerWon = 0;
 				}
 				else
 					++it;
+			}
+
+
+			// Deal with shrooms, make hallucination rooms
+			for (auto& shroom : shrooms)
+			{
+				shroom.update();
+				if (shroom.sporeReleaseCounter > 2 * framerate) {
+					bananas.emplace_back(sf::Vector2f{ shroom.mySprite.getPosition().x, shroom.mySprite.getPosition().y - 100.f}, bananaTexture, 1, & bananaShader);
+					bananas.back().setVelocity({ playerToThrow ? 10.f : -10.f, 0.f});
+					shroom.sporeReleaseCounter = 0;
+				}
+				shroom.draw(window, sf::RenderStates::Default);
 			}
 		}
 		else
