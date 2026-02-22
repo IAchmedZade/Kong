@@ -77,6 +77,13 @@ struct Spore
 		// This is sooo bad I am proud of it!!
 		return sporeSprite.getPosition() == other.sporeSprite.getPosition();
 	}
+
+	void reset()
+	{
+		visible = false;
+		sporeSprite.setPosition({ 0.f, 0.f });
+		velocity = sf::Vector2f{ 0.f, 0.f };
+	}
 };
 
 
@@ -265,10 +272,10 @@ int main()
 				else if (event->code == sf::Keyboard::Key::R /*&& playerWon != -1*/)
 				{
 					for (int i = 0; i < MAX_SHROOMS; ++i)
-						shrooms[i].visible = false;
+						shrooms[i].reset();
 					shroomIdx = 0;
 					for (int i = 0; i < MAX_SPORES; ++i)
-						spores[i].visible = false;
+						spores[i].reset();
 					sporeIdx = 0;
 
 					for (auto bit = bananas.begin(); bit != bananas.end();)
@@ -351,7 +358,7 @@ int main()
 				if (shroom.visible)
 				{
 					shroom.update();
-					// TODO Shroom lifecycle shit. Need also to die at some rate...maybe after sporing?
+					// TODO Shroom lifecycle shit. Dying after sporing good but still...
 					if (shroom.age < 10 * splitShrooms * framerate)
 					{
 						shroom.shader->setUniform("texture", *pSingleShroomTexture);

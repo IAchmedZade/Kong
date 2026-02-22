@@ -17,6 +17,7 @@ public:
 
 	void update();
 	void draw(sf::RenderTarget& target, sf::RenderStates states) const override;
+	void reset();
 
 	std::shared_ptr<sf::Texture> pMyTexture;
 	sf::Sprite mySprite;

@@ -23,7 +23,7 @@ void Shroom::draw(sf::RenderTarget& target, sf::RenderStates states) const
 {
 	static float debugFloat = 0.f;
 	debugFloat += 0.01f;
-	shader->setUniform("blinking", debugFloat);
+	shader->setUniform("blinking", (float) sporeReleaseCounter);
 	states.shader = shader;
 	target.draw(mySprite, states);
 	if (debug)
@@ -41,4 +41,11 @@ void Shroom::update()
 {
 	sporeReleaseCounter++;
 	age++;	
+}
+
+void Shroom::reset()
+{
+	sporeReleaseCounter = 0;
+	visible = false;
+	mySprite.setPosition(sf::Vector2f{ 0.f, 0.f });
 }
