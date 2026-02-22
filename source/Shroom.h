@@ -24,5 +24,6 @@ public:
 	uint8_t sporeReleaseCounter;
 	std::vector<Banana> bananaSpores;
 	bool debug = false;
+	bool visible = false;
 	uint16_t age = 0;
 };

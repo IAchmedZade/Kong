@@ -11,6 +11,7 @@
 #include "Level.h"
 #include <chrono>
 #include <memory>
+#include <stdlib.h>
 
 #include "Banana.h"
 #include "Player.h"
@@ -80,7 +81,7 @@ struct Spore
 
 
 std::list<Banana> bananas;
-std::vector<Shroom> shrooms;
+constexpr size_t MAX_SHROOMS = 1000;
 std::vector<Spore> spores;
 
 static bool isAnyPosInHorizontalLineBelowSkyline(const sf::Vector2f& pos, float deltaX, const Level& level)
@@ -157,6 +158,9 @@ int main()
 	shroomShader.setUniform("texture", *pSingleShroomTexture);
 	shroomShader.setUniform("textureSize", (sf::Vector2f)pSingleShroomTexture->getSize());
 
+	std::vector<Shroom> shrooms(MAX_SHROOMS, Shroom(sf::Vector2f{ 0.f, 0.f }, pSingleShroomTexture, 0, &shroomShader));
+	
+
 	sf::Shader bananaShader;
 	if (!bananaShader.loadFromFile("assets/BananaVertexShader", "assets/BananaFragmentShader"))
 	{
@@ -221,8 +225,9 @@ int main()
 	uint8_t playerToThrow = 0;
 	int playerWon = -1;
 	float shroomingSpeed = 32;
+	int shroomIdx = 0;
 
-	while (window.isOpen())
+ 	while (window.isOpen())
 	{
 		const std::optional<sf::Event> optionalevent = window.pollEvent();
 		if (optionalevent.has_value())
@@ -262,9 +267,9 @@ int main()
 				}
 				else if (event->code == sf::Keyboard::Key::R /*&& playerWon != -1*/)
 				{
-					auto it = shrooms.begin();
-					for (; it != shrooms.end();)
-						it = shrooms.erase(it);
+					for (int i = 0; i < MAX_SHROOMS; ++i)
+						shrooms[i].visible = false;
+					shroomIdx = 0;
 					for (auto bit = bananas.begin(); bit != bananas.end();)
 						bit = bananas.erase(bit);
 					level.generateSkyline(width, height, desiredNumSkyscrapers);
@@ -322,7 +327,9 @@ int main()
 				if (banana.explodingFrame > framerate/* || isOutsideOfWindow(window, banana.getPosition())*/)
 				{
 					auto shroomPos = getShroomAtHighestYPoint(banana.getPosition(), level);
-					shrooms.emplace_back(sf::Vector2f{ shroomPos.x, shroomPos.y - 25.f }, pSingleShroomTexture, 1, &shroomShader);
+					shrooms[shroomIdx] = Shroom(sf::Vector2f{shroomPos.x, shroomPos.y - 25.f}, pSingleShroomTexture, 1, &shroomShader);
+					shrooms[shroomIdx].visible = true;
+					shroomIdx++;
 					//shrooms.back().debug = true;
 					it = bananas.erase(it);
 					/*if (player0.health <= 0) playerWon = 1;
@@ -335,50 +342,52 @@ int main()
 
 			// Deal with shrooms, make hallucinations bloom
 			float splitShrooms = 0.2f;
-			if (shrooms.size() > 2)
+			if (shroomIdx > 2)
 				shroomingSpeed = std::min(3.f, shroomingSpeed - 0.001f);
-			for (auto shroomIterator = shrooms.begin(); shroomIterator != shrooms.end();)
+			for (int shroomAccessIdx = 0; shroomAccessIdx < MAX_SHROOMS; ++shroomAccessIdx)
 			{
-				auto& shroom = *shroomIterator;
-				shroom.update();
-				// TODO Shroom lifecycle shit. Need also to die at some rate...maybe after sporing?
-				if (shroom.age < 10 * splitShrooms * framerate)
+				auto& shroom = shrooms[shroomAccessIdx];
+				if (shroom.visible)
 				{
-					shroom.shader->setUniform("texture", *pSingleShroomTexture);
-				}
-				else if (shroom.age > 10 * splitShrooms * framerate && shroom.age <= 20 * splitShrooms * framerate)
-				{
-					shroom.shader->setUniform("texture", *pTwoShroomTexture);
-					shroom.mySprite.setScale({ 1.002f * shroom.mySprite.getScale().x, 1.002f * shroom.mySprite.getScale().y });
-				}
-				else if (shroom.age > 20 * splitShrooms * framerate)
-				{
-					shroom.shader->setUniform("texture", *pThreeShroomTexture);
-				}
-				else if (shroom.age > 30 * splitShrooms * framerate)
-				{
-					shroomIterator = shrooms.erase(shroomIterator);
-					continue;
-				}
-				if (shroom.sporeReleaseCounter > shroomingSpeed * framerate)
-				{
-					for (int i = 0; i < 10; ++i)
+					shroom.update();
+					// TODO Shroom lifecycle shit. Need also to die at some rate...maybe after sporing?
+					if (shroom.age < 10 * splitShrooms * framerate)
 					{
-						float rand = 3.14159f * distributionBetweenZeroAndOne(generator);
-						spores.emplace_back(&sporeTexture,
-											&sporeShader,
-											sf::Vector2f{ shroom.mySprite.getPosition().x, 2.9f * shroom.mySprite.getPosition().y / 3 }, 
-											sf::Vector2f{ 7.5f * cosf(rand), -15.f * sinf(rand) });
-					}					
-					shroom.sporeReleaseCounter = 0;
-					// Hmmm....?!
-					// AHA! Erasing actually does not work... CPP is insane... fuck :D
-					// Use C-style arrays soon...blyat!
-					shroomIterator = shrooms.erase(shroomIterator);
-					continue;
+						shroom.shader->setUniform("texture", *pSingleShroomTexture);
+					}
+					else if (shroom.age > 10 * splitShrooms * framerate && shroom.age <= 20 * splitShrooms * framerate)
+					{
+						shroom.shader->setUniform("texture", *pTwoShroomTexture);
+						shroom.mySprite.setScale({ 1.002f * shroom.mySprite.getScale().x, 1.002f * shroom.mySprite.getScale().y });
+					}
+					else if (shroom.age > 20 * splitShrooms * framerate)
+					{
+						shroom.shader->setUniform("texture", *pThreeShroomTexture);
+					}
+					else if (shroom.age > 30 * splitShrooms * framerate)
+					{
+						shroom.visible = false;
+						continue;
+					}
+					if (shroom.sporeReleaseCounter > shroomingSpeed * framerate)
+					{
+						for (int i = 0; i < 10; ++i)
+						{
+							float rand = 3.14159f * distributionBetweenZeroAndOne(generator);
+							spores.emplace_back(&sporeTexture,
+								&sporeShader,
+								sf::Vector2f{ shroom.mySprite.getPosition().x, 2.9f * shroom.mySprite.getPosition().y / 3 },
+								sf::Vector2f{ 7.5f * cosf(rand), -15.f * sinf(rand) });
+						}
+						shroom.sporeReleaseCounter = 0;
+						// Hmmm....?!
+						// AHA! Erasing actually does not work... CPP is insane... fuck :D
+						// Use C-style arrays soon...blyat!
+						shroom.visible = false;
+						continue;
+					}
+					shroom.draw(window, sf::RenderStates::Default);				
 				}
-				shroom.draw(window, sf::RenderStates::Default);
-				shroomIterator++;
 			}
 
 			// tEh Spores are coming for you!!
@@ -390,9 +399,9 @@ int main()
 				if (level.isBelowSkyline(sporePos))
 				{		
 					bool closeToOtherShroom = false;
-					for (auto& shroom : shrooms)
+					for (int i = 0; i < MAX_SHROOMS; ++i)
 					{
-						if (abs(shroom.mySprite.getPosition().x - sporePos.x) < 10.f)
+						if (shrooms[i].visible && abs(shrooms[i].mySprite.getPosition().x - sporePos.x) < 10.f)
 						{
 							closeToOtherShroom = true;
 							break;
@@ -405,7 +414,11 @@ int main()
 						if (rand > 0.8)
 						{
 							auto newShroomPos = getShroomAtHighestYPoint(sporePos, level);
-							shrooms.emplace_back(newShroomPos, pSingleShroomTexture, 1, &shroomShader);
+							shrooms[shroomIdx] = Shroom(newShroomPos, pSingleShroomTexture, 1, &shroomShader);
+							shrooms[shroomIdx].visible = true;
+							// TODO Crash because out of range but also need to vectorize spores as well as rest of entities!!
+							// Arenas all the way!
+							shroomIdx++;
 						}
 					}					
 					sporeIterator = spores.erase(sporeIterator);
@@ -417,7 +430,7 @@ int main()
 
 
 
-			sf::Text debugText(font, "Shroom blyat size " + std::to_string(shrooms.size()) + "\nBanana size kurwa " + std::to_string(bananas.size()));
+			sf::Text debugText(font, "Shroom idx kurwa: " + std::to_string(shroomIdx) + "\nBanana size kurwa " + std::to_string(bananas.size()));
 			debugText.setPosition({ 3.f * width / 7, height / 16.f });
 			window.draw(debugText);
 		}
