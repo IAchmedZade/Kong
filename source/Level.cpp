@@ -68,7 +68,7 @@ void Level::generateSkyline(const uint32_t width, const uint32_t height, const u
 }
 
 
-bool Level::isBelowSkyline(const sf::Vector2f& pos)
+bool Level::isBelowSkyline(const sf::Vector2f& pos) const
 {
 	for (auto& rect : mySkyline)
 	{

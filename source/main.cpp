@@ -29,7 +29,6 @@ struct Spore
 	float blinking = 0.f;
 
 	sf::Shader* sporeShader;
-	sf::Vector2f position;
 	sf::Vector2f velocity;
 	const float xScale = 0.15f;
 	const float yScale = 0.2f;
@@ -38,8 +37,7 @@ struct Spore
 		: sporeSprite(*texture),
 		sporeTexture(texture),
 		sporeShader(sporeShader),
-		velocity(velocity),
-		position(position)
+		velocity(velocity)
 
 	{
 		sporeSprite.setTexture(*texture);
@@ -51,9 +49,9 @@ struct Spore
 
 	void update(float dt = 0.001f)
 	{
-		static float gravity = 0.81f;
-		velocity.y += gravity;
-		sporeSprite.move(velocity);
+		static float sporeGravity = 0.4f;
+		velocity.y += sporeGravity;
+		sporeSprite.setPosition(velocity + sporeSprite.getPosition());
 		blinking += dt;
 		sporeSprite.rotate(sf::radians(dt));
 		if (blinking > 2 * 3141.59f || blinking < 0.f) blinking = 0.f;
@@ -71,6 +69,12 @@ struct Spore
 		debugCircle.setPosition(sporeSprite.getPosition());
 		target.draw(debugCircle);*/
 	}
+
+	bool operator=(const Spore& other)
+	{
+		// This is sooo bad I am proud of it!!
+		return sporeSprite.getPosition() == other.sporeSprite.getPosition();
+	}
 };
 
 
@@ -78,6 +82,27 @@ struct Spore
 std::list<Banana> bananas;
 std::vector<Shroom> shrooms;
 std::vector<Spore> spores;
+
+static bool isAnyPosInHorizontalLineBelowSkyline(const sf::Vector2f& pos, float deltaX, const Level& level)
+{
+	for (float step = 0.f; step < deltaX; step += 0.1f)
+	{
+		if (level.isBelowSkyline(sf::Vector2f{ pos.x + step, pos.y }))
+			return true;
+	}
+	return false;
+}
+
+
+static sf::Vector2f getShroomAtHighestYPoint(const sf::Vector2f& pos, const Level& level)
+{
+	sf::Vector2f shroomPos = { pos.x, pos.y };
+	int maxShift = 0;
+	while (isAnyPosInHorizontalLineBelowSkyline(shroomPos, 10.f, level) && maxShift++ < 1000)
+		shroomPos.y -= 5.f; // = sf::Vector2f{ shroomPos.x, shroomPos.y - 5.f };
+	return shroomPos;
+}
+
 uint8_t globalBananaId = 0;
 int main()
 {
@@ -87,7 +112,7 @@ int main()
 
 	const uint32_t width = sf::VideoMode::getDesktopMode().size.x;
 	const uint32_t height = sf::VideoMode::getDesktopMode().size.y;
-	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong");
+	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong at size (" + std::to_string(width) + ", " + std::to_string(height) + ")");
 
 	const uint32_t framerate = 60;
 	window.setFramerateLimit(framerate);
@@ -160,7 +185,6 @@ int main()
 	sporeShader.setUniform("textureSize", (sf::Vector2f)sporeTexture.getSize());
 	sporeShader.setUniform("texture", sporeTexture);
 
-	spores.emplace_back(&sporeTexture, &sporeShader, sf::Vector2f{ width / 4.f, 100.f }, sf::Vector2f{ 0.f, 0.f });
 
 
 
@@ -297,11 +321,7 @@ int main()
 
 				if (banana.explodingFrame > framerate/* || isOutsideOfWindow(window, banana.getPosition())*/)
 				{
-					sf::Vector2f shroomPos = { banana.getPosition().x, banana.getPosition().y };
-					int maxShift = 0;
-					while ((level.isBelowSkyline({ shroomPos.x + 5.f, shroomPos.y }) || level.isBelowSkyline({ shroomPos.x - 5.f, shroomPos.y })) && maxShift++ < 100)
-						shroomPos = sf::Vector2f{ shroomPos.x, shroomPos.y - 5.f };
-
+					auto shroomPos = getShroomAtHighestYPoint(banana.getPosition(), level);
 					shrooms.emplace_back(sf::Vector2f{ shroomPos.x, shroomPos.y - 25.f }, pSingleShroomTexture, 1, &shroomShader);
 					//shrooms.back().debug = true;
 					it = bananas.erase(it);
@@ -321,6 +341,7 @@ int main()
 			{
 				auto& shroom = *shroomIterator;
 				shroom.update();
+				// TODO Shroom lifecycle shit. Need also to die at some rate...maybe after sporing?
 				if (shroom.age < 10 * splitShrooms * framerate)
 				{
 					shroom.shader->setUniform("texture", *pSingleShroomTexture);
@@ -343,13 +364,18 @@ int main()
 				{
 					for (int i = 0; i < 10; ++i)
 					{
-						float rand = 1.f + distributionBetweenZeroAndOne(generator);
+						float rand = 3.14159f * distributionBetweenZeroAndOne(generator);
 						spores.emplace_back(&sporeTexture,
 											&sporeShader,
 											sf::Vector2f{ shroom.mySprite.getPosition().x, 2.9f * shroom.mySprite.getPosition().y / 3 }, 
-											sf::Vector2f{ 5.f * (rand -1.5f), -rand * 5.f });
+											sf::Vector2f{ 7.5f * cosf(rand), -15.f * sinf(rand) });
 					}					
 					shroom.sporeReleaseCounter = 0;
+					// Hmmm....?!
+					// AHA! Erasing actually does not work... CPP is insane... fuck :D
+					// Use C-style arrays soon...blyat!
+					shroomIterator = shrooms.erase(shroomIterator);
+					continue;
 				}
 				shroom.draw(window, sf::RenderStates::Default);
 				shroomIterator++;
@@ -360,6 +386,31 @@ int main()
 			{
 				auto& spore = *sporeIterator;
 				spore.update(0.5f);
+				auto sporePos = spore.sporeSprite.getPosition();
+				if (level.isBelowSkyline(sporePos))
+				{		
+					bool closeToOtherShroom = false;
+					for (auto& shroom : shrooms)
+					{
+						if (abs(shroom.mySprite.getPosition().x - sporePos.x) < 10.f)
+						{
+							closeToOtherShroom = true;
+							break;
+						}
+					}
+					if (!closeToOtherShroom && sporePos.y < height / 2)
+					{
+						float rand = distributionBetweenZeroAndOne(generator);
+						// 20% chance of new shroom kurwa!!
+						if (rand > 0.8)
+						{
+							auto newShroomPos = getShroomAtHighestYPoint(sporePos, level);
+							shrooms.emplace_back(newShroomPos, pSingleShroomTexture, 1, &shroomShader);
+						}
+					}					
+					sporeIterator = spores.erase(sporeIterator);
+					continue;
+				}
 				spore.draw(window);
 				sporeIterator++;
 			}
