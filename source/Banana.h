@@ -22,6 +22,7 @@ public:
 
 	uint8_t explodingFrame = 0;
 	uint8_t id = 0;
+	bool debug = false;
 
 
 private:

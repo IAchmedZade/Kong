@@ -1,6 +1,7 @@
 #include <sfml/network.hpp>
 #include <sfml/window.hpp>
 #include <sfml/graphics.hpp>
+#include <sfml/Graphics/Sprite.hpp>
 #include <iostream>
 #include <random>
 #include <vector>
@@ -21,10 +22,69 @@ static bool isOutsideOfWindow(const sf::RenderWindow& window, const sf::Vector2f
 }
 
 
+struct Spore
+{
+	sf::Sprite sporeSprite;
+	sf::Texture* sporeTexture;
+	float blinking = 0.f;
+
+	sf::Shader* sporeShader;
+	sf::Vector2f position;
+	sf::Vector2f velocity;
+	const float xScale = 0.15f;
+	const float yScale = 0.2f;
+
+	Spore(sf::Texture* texture, sf::Shader* sporeShader, sf::Vector2f position, sf::Vector2f velocity)
+		: sporeSprite(*texture),
+		sporeTexture(texture),
+		sporeShader(sporeShader),
+		velocity(velocity),
+		position(position)
+
+	{
+		sporeSprite.setTexture(*texture);
+		sporeSprite.setPosition(position);
+		sporeSprite.setScale({ xScale, yScale });
+		sporeSprite.setOrigin({ 0.5f * sporeSprite.getTextureRect().size.x, 
+								0.5f * sporeSprite.getTextureRect().size.y });
+	}
+
+	void update(float dt = 0.001f)
+	{
+		static float gravity = 0.81f;
+		velocity.y += gravity;
+		sporeSprite.move(velocity);
+		blinking += dt;
+		sporeSprite.rotate(sf::radians(dt));
+		if (blinking > 2 * 3141.59f || blinking < 0.f) blinking = 0.f;
+	}
+
+	void draw(sf::RenderTarget& target)
+	{
+		// Will fail to draw?		
+		sporeSprite.setScale({ sinf(blinking) * xScale, yScale });
+		target.draw(sporeSprite, sporeShader);
+
+		/*sf::CircleShape debugCircle(10);
+		debugCircle.setOrigin({ 10.f, 10.f });
+		debugCircle.setFillColor(sf::Color::Yellow);
+		debugCircle.setPosition(sporeSprite.getPosition());
+		target.draw(debugCircle);*/
+	}
+};
+
+
+
 std::list<Banana> bananas;
+std::vector<Shroom> shrooms;
+std::vector<Spore> spores;
 uint8_t globalBananaId = 0;
 int main()
 {
+	std::random_device rd;
+	std::mt19937 generator(rd());
+	std::uniform_real_distribution<> distributionBetweenZeroAndOne(0.f, 1.f);
+
 	const uint32_t width = sf::VideoMode::getDesktopMode().size.x;
 	const uint32_t height = sf::VideoMode::getDesktopMode().size.y;
 	sf::RenderWindow window(sf::VideoMode({ width, height }), "Kong");
@@ -34,7 +94,9 @@ int main()
 
 	const auto bananaTexture = std::make_shared<sf::Texture>();
 	const auto playerTexture = std::make_shared<sf::Texture>();
-	const auto pShroomTexture = std::make_shared<sf::Texture>();
+	const auto pSingleShroomTexture = std::make_shared<sf::Texture>();
+	const auto pTwoShroomTexture = std::make_shared<sf::Texture>();
+	const auto pThreeShroomTexture = std::make_shared<sf::Texture>();
 	if (!bananaTexture->loadFromFile("assets/banana.png"))
 	{
 		std::cerr << "Failed to load banana texture.\n";
@@ -45,7 +107,17 @@ int main()
 		std::cerr << "Failed to load mokey texture.\n";
 		return -1;
 	}
-	if (!pShroomTexture->loadFromFile("assets/Shroom.png"))
+	if (!pSingleShroomTexture->loadFromFile("assets/Shroom.png"))
+	{
+		std::cerr << "Failed to load shroom texture.\n";
+		return -1;
+	}
+	if (!pTwoShroomTexture->loadFromFile("assets/TwoShroom.png"))
+	{
+		std::cerr << "Failed to load shroom texture.\n";
+		return -1;
+	}
+	if (!pThreeShroomTexture->loadFromFile("assets/ThreeShroom.png"))
 	{
 		std::cerr << "Failed to load shroom texture.\n";
 		return -1;
@@ -57,13 +129,8 @@ int main()
 		std::cerr << "Shrooms shader not loaded!\n";
 		return -1;
 	}
-	shroomShader.setUniform("texture", *pShroomTexture);
-	shroomShader.setUniform("textureSize", (sf::Vector2f)pShroomTexture->getSize());
-
-
-	std::vector<Shroom> shrooms;
-	//shrooms.emplace_back(sf::Vector2f{(float) width / 2,(float)height / 8 }, shroomTexture, 100, &shroomShader);
-
+	shroomShader.setUniform("texture", *pSingleShroomTexture);
+	shroomShader.setUniform("textureSize", (sf::Vector2f)pSingleShroomTexture->getSize());
 
 	sf::Shader bananaShader;
 	if (!bananaShader.loadFromFile("assets/BananaVertexShader", "assets/BananaFragmentShader"))
@@ -73,17 +140,49 @@ int main()
 	}
 
 	bananaShader.setUniform("texture", *bananaTexture);
-	bananaShader.setUniform("maxExplosion", (float) framerate);
+	bananaShader.setUniform("maxExplosion", (float)framerate);
 	bananaShader.setUniform("textureSize", sf::Vector2f(bananaTexture->getSize().x, bananaTexture->getSize().y));
 
-	Level level;
-	level.generateSkyline(width, height, 20);
 
-	std::vector<sf::Vector2f> playerPositions = level.getPlayerPositions();
+	sf::Texture sporeTexture;
+	if (!sporeTexture.loadFromFile("assets/Spore.png"))
+	{
+		std::cerr << "Failed to load spore texture exiting\n";
+		return -1;
+	}
+	sf::Shader sporeShader;
+	if (!sporeShader.loadFromFile("assets/SporeVertexShader", "assets/SporeFragmentShader"))
+	{
+		std::cerr << "Failed to load spore shader; Critical for this game exiting blyat!!\n";
+		return -1;
+	}
+
+	sporeShader.setUniform("textureSize", (sf::Vector2f)sporeTexture.getSize());
+	sporeShader.setUniform("texture", sporeTexture);
+
+	spores.emplace_back(&sporeTexture, &sporeShader, sf::Vector2f{ width / 4.f, 100.f }, sf::Vector2f{ 0.f, 0.f });
+
+
+
+
+
+
+
+	Level level;
+	const uint32_t desiredNumSkyscrapers = 30;
+	// Offset of x for player on top of skyscraper. Oh blyat!!
+	const float magicScalarKurwa = 0.25f;
+	level.generateSkyline(width, height, desiredNumSkyscrapers);
+	// TODO Broken due to scale
+	std::vector<sf::Vector2f> playerPositions = level.getPlayerPositions(magicScalarKurwa);
 
 	Player player0(playerPositions[0], playerTexture, true);
 	Player player1(playerPositions[1], playerTexture, false);
-	
+
+	// Ensure you are not too fat in x direction to fit skyscraper bitch!
+	player0.mySprite.setScale({ 20 * player0.scaleFactor / desiredNumSkyscrapers, player0.mySprite.getScale().y });
+	player1.mySprite.setScale({ -20 * player1.scaleFactor / desiredNumSkyscrapers, player1.mySprite.getScale().y });
+
 	sf::Font font;
 	if (!font.openFromFile("./assets/comic.ttf"))
 	{
@@ -97,21 +196,21 @@ int main()
 
 	uint8_t playerToThrow = 0;
 	int playerWon = -1;
-	
-	
+	float shroomingSpeed = 32;
+
 	while (window.isOpen())
 	{
 		const std::optional<sf::Event> optionalevent = window.pollEvent();
 		if (optionalevent.has_value())
 		{
 			sf::Event e = optionalevent.value();
-			if (e.is<sf::Event::Closed>() || (e.is<sf::Event::KeyPressed>() && 
+			if (e.is<sf::Event::Closed>() || (e.is<sf::Event::KeyPressed>() &&
 				e.getIf<sf::Event::KeyPressed>()->code == sf::Keyboard::Key::Escape))
-				return 0;			
+				return 0;
 			if (e.is<sf::Event::MouseWheelScrolled>())
 			{
 				float delta = e.getIf<sf::Event::MouseWheelScrolled>()->delta;
-				
+
 			}
 			if (auto event = e.getIf<sf::Event::KeyReleased>())
 			{
@@ -137,30 +236,31 @@ int main()
 					}
 					playerToThrow = playerToThrow ? 0 : 1;
 				}
-				else if (event->code == sf::Keyboard::Key::R && playerWon != -1)
+				else if (event->code == sf::Keyboard::Key::R /*&& playerWon != -1*/)
 				{
 					auto it = shrooms.begin();
 					for (; it != shrooms.end();)
 						it = shrooms.erase(it);
 					for (auto bit = bananas.begin(); bit != bananas.end();)
 						bit = bananas.erase(bit);
-					level.generateSkyline(width, height, 20);
-					auto newPositions = level.getPlayerPositions();					
-					player0.setPosition(newPositions[0]);					
-					player1.setPosition(newPositions[1]);					
-					
+					level.generateSkyline(width, height, desiredNumSkyscrapers);
+					// TODO Broken
+					auto newPositions = level.getPlayerPositions(magicScalarKurwa);
+					player0.setPosition(newPositions[0]);
+					player1.setPosition(newPositions[1]);
+
 					player0.health = 100;
 					player1.health = 100;
 
 					playerWon = -1;
-				}			
+				}
 			}
 		}
-		
+
 		window.clear();
 		level.draw(window);
 		window.draw(player0);
-		window.draw(player1);		
+		window.draw(player1);
 		window.draw(player0Health);
 		window.draw(player1Health);
 		if (playerWon == -1)
@@ -180,6 +280,10 @@ int main()
 							(!playerToThrow && player0.checkIfHitAndDecrementHealth(pos, window)) ||
 							(playerToThrow && player1.checkIfHitAndDecrementHealth(pos, window)))
 						{
+							/*banana.debug = !level.isBelowSkyline(pos);
+							if (banana.debug && playerToThrow) player1.debug = true;
+							else if (banana.debug && !playerToThrow) player0.debug = true;
+							else player0.debug = player1.debug = false;*/
 							player0Health.setString(std::to_string(player0.health));
 							player1Health.setString(std::to_string(player1.health));
 							shouldExplode = true;
@@ -187,43 +291,92 @@ int main()
 						}
 					}
 				}
-				if (shouldExplode)
-				{
-					banana.explodingFrame++;
-				}
+				if (shouldExplode) banana.explodingFrame++;
 
 				banana.draw(window, sf::RenderStates::Default);
-				if (banana.explodingFrame > framerate || isOutsideOfWindow(window, banana.getPosition()))
+
+				if (banana.explodingFrame > framerate/* || isOutsideOfWindow(window, banana.getPosition())*/)
 				{
-					shrooms.emplace_back(banana.getPosition(), pShroomTexture, 1, &shroomShader);
+					sf::Vector2f shroomPos = { banana.getPosition().x, banana.getPosition().y };
+					int maxShift = 0;
+					while ((level.isBelowSkyline({ shroomPos.x + 5.f, shroomPos.y }) || level.isBelowSkyline({ shroomPos.x - 5.f, shroomPos.y })) && maxShift++ < 100)
+						shroomPos = sf::Vector2f{ shroomPos.x, shroomPos.y - 5.f };
+
+					shrooms.emplace_back(sf::Vector2f{ shroomPos.x, shroomPos.y - 25.f }, pSingleShroomTexture, 1, &shroomShader);
+					//shrooms.back().debug = true;
 					it = bananas.erase(it);
-					if (player0.health <= 0) playerWon = 1;
-					else if (player1.health <= 0) playerWon = 0;
+					/*if (player0.health <= 0) playerWon = 1;
+					else if (player1.health <= 0) playerWon = 0;*/
 				}
 				else
 					++it;
 			}
 
 
-			// Deal with shrooms, make hallucination rooms
-			for (auto& shroom : shrooms)
+			// Deal with shrooms, make hallucinations bloom
+			float splitShrooms = 0.2f;
+			if (shrooms.size() > 2)
+				shroomingSpeed = std::min(3.f, shroomingSpeed - 0.001f);
+			for (auto shroomIterator = shrooms.begin(); shroomIterator != shrooms.end();)
 			{
+				auto& shroom = *shroomIterator;
 				shroom.update();
-				if (shroom.sporeReleaseCounter > 2 * framerate) {
-					bananas.emplace_back(sf::Vector2f{ shroom.mySprite.getPosition().x, shroom.mySprite.getPosition().y - 100.f}, bananaTexture, 1, & bananaShader);
-					bananas.back().setVelocity({ playerToThrow ? 10.f : -10.f, 0.f});
+				if (shroom.age < 10 * splitShrooms * framerate)
+				{
+					shroom.shader->setUniform("texture", *pSingleShroomTexture);
+				}
+				else if (shroom.age > 10 * splitShrooms * framerate && shroom.age <= 20 * splitShrooms * framerate)
+				{
+					shroom.shader->setUniform("texture", *pTwoShroomTexture);
+					shroom.mySprite.setScale({ 1.002f * shroom.mySprite.getScale().x, 1.002f * shroom.mySprite.getScale().y });
+				}
+				else if (shroom.age > 20 * splitShrooms * framerate)
+				{
+					shroom.shader->setUniform("texture", *pThreeShroomTexture);
+				}
+				else if (shroom.age > 30 * splitShrooms * framerate)
+				{
+					shroomIterator = shrooms.erase(shroomIterator);
+					continue;
+				}
+				if (shroom.sporeReleaseCounter > shroomingSpeed * framerate)
+				{
+					for (int i = 0; i < 10; ++i)
+					{
+						float rand = 1.f + distributionBetweenZeroAndOne(generator);
+						spores.emplace_back(&sporeTexture,
+											&sporeShader,
+											sf::Vector2f{ shroom.mySprite.getPosition().x, 2.9f * shroom.mySprite.getPosition().y / 3 }, 
+											sf::Vector2f{ 5.f * (rand -1.5f), -rand * 5.f });
+					}					
 					shroom.sporeReleaseCounter = 0;
 				}
 				shroom.draw(window, sf::RenderStates::Default);
+				shroomIterator++;
 			}
+
+			// tEh Spores are coming for you!!
+			for (auto sporeIterator = spores.begin(); sporeIterator != spores.end();)
+			{
+				auto& spore = *sporeIterator;
+				spore.update(0.5f);
+				spore.draw(window);
+				sporeIterator++;
+			}
+
+
+
+			sf::Text debugText(font, "Shroom blyat size " + std::to_string(shrooms.size()) + "\nBanana size kurwa " + std::to_string(bananas.size()));
+			debugText.setPosition({ 3.f * width / 7, height / 16.f });
+			window.draw(debugText);
 		}
 		else
 		{
-			sf::Text winningText(font, "Winning kurwa player" + std::to_string(playerWon) + "\nPress R to reset kurwa!");
-			winningText.setPosition({ 3.f * width / 7, height / 4.f});
+			sf::Text winningText(font, "Winning player ID " + std::to_string(playerWon) + "\nPress R to reset kurwa!");
+			winningText.setPosition({ 3.f * width / 7, height / 4.f });
 			window.draw(winningText);
 		}
-		
+
 		window.display();
 	}
 }

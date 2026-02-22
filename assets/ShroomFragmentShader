@@ -9,7 +9,7 @@ void main()
     vec4 texCol = texture2D(texture, v_texCoord);        
     if (texCol.x < 0.3)
     {
-        texCol.y += 0.2 * (1 + sin(blinking));
+        texCol.y += 0.2 * (1 + 2*  sin(blinking));
     }
     gl_FragColor = texCol;
 }

@@ -43,6 +43,18 @@ void Banana::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	shader->setUniform("explosion", (float) explodingFrame);
 	states.shader = shader;
 	target.draw(mySprite, states);
+	if (debug)
+	{
+		sf::CircleShape circle(5);
+		circle.setOrigin(sf::Vector2f{ 5,5 });
+		circle.setFillColor(sf::Color::Red);
+
+		for (auto& pos : getShittyBoundingPixels())
+		{
+			circle.setPosition(pos);
+			target.draw(circle);
+		}		
+	}
 }
 
 std::vector<sf::Vector2f> Banana::getShittyBoundingPixels() const

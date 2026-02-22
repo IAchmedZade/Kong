@@ -26,10 +26,19 @@ void Shroom::draw(sf::RenderTarget& target, sf::RenderStates states) const
 	shader->setUniform("blinking", debugFloat);
 	states.shader = shader;
 	target.draw(mySprite, states);
+	if (debug)
+	{
+		sf::CircleShape debug(10);
+		debug.setFillColor(sf::Color::Red);
+		debug.setOrigin({ 10,10 });
+		debug.setPosition(mySprite.getPosition());
+		target.draw(debug);
+	}
 }
 
 
 void Shroom::update()
 {
 	sporeReleaseCounter++;
+	age++;	
 }

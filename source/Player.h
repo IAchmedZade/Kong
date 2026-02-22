@@ -16,9 +16,7 @@ public:
 	void setPosition(const sf::Vector2f& pos);
 	bool checkIfHitAndDecrementHealth(const sf::Vector2f& pos, sf::RenderTarget& target);
 	int health = 100;
-	
-private:
-	
+	bool debug = false;	
 	bool left;
 	const float scaleFactor = 0.5f;
 	std::shared_ptr<sf::Texture> pMyTexture;

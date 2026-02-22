@@ -10,6 +10,6 @@ public:
 	// generate level funtion here
 	void generateSkyline(const uint32_t width, const uint32_t height, const uint32_t minWidthSkyscraper);
 	bool isBelowSkyline(const sf::Vector2f& pos);
-	std::vector<sf::Vector2f> getPlayerPositions() const;
+	std::vector<sf::Vector2f> getPlayerPositions(float magicScalar = 0.25f) const;
 	void draw(sf::RenderTarget& target);
 };

@@ -12,9 +12,9 @@ void printVector(const std::vector<T>& vec)
 	std::cout << '\n';
 }
 
-std::random_device rd;  // Will be used to obtain a seed for the random number engine
-std::mt19937 generator(rd()); // Standard mersenne_twister_engine seeded with rd()
-std::uniform_real_distribution<> distributionForHeight(0.4, 0.5);
+std::random_device rd;  
+std::mt19937 generator(rd());
+std::uniform_real_distribution<> distributionForHeight(0.5, 0.7);
 
 
 // Implementation here
@@ -88,7 +88,7 @@ void Level::draw(sf::RenderTarget & target)
 }
 
 
-std::vector<sf::Vector2f> Level::getPlayerPositions() const
+std::vector<sf::Vector2f> Level::getPlayerPositions(float magicScalar) const
 {
 	if (mySkyline.size() > 3)
 	{
@@ -96,7 +96,7 @@ std::vector<sf::Vector2f> Level::getPlayerPositions() const
 		// Allow movement?
 		auto& firstBox = mySkyline[1];
 		auto& secondBox = mySkyline[mySkyline.size() - 2];
-		const float magicXOffset = 0.25f;
+		const float magicXOffset = magicScalar;
 		return 
 		{
 			{firstBox.getPosition().x + magicXOffset * firstBox.getSize().x , firstBox.getPosition().y},			

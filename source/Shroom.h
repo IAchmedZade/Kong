@@ -23,4 +23,6 @@ public:
 	sf::Shader* shader;
 	uint8_t sporeReleaseCounter;
 	std::vector<Banana> bananaSpores;
+	bool debug = false;
+	uint16_t age = 0;
 };
