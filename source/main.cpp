@@ -28,6 +28,7 @@ struct Spore
 	sf::Sprite sporeSprite;
 	sf::Texture* sporeTexture;
 	float blinking = 0.f;
+	bool visible = false;
 
 	sf::Shader* sporeShader;
 	sf::Vector2f velocity;
@@ -82,7 +83,7 @@ struct Spore
 
 std::list<Banana> bananas;
 constexpr size_t MAX_SHROOMS = 1000;
-std::vector<Spore> spores;
+constexpr size_t MAX_SPORES = 10 * MAX_SHROOMS;
 
 static bool isAnyPosInHorizontalLineBelowSkyline(const sf::Vector2f& pos, float deltaX, const Level& level)
 {
@@ -189,12 +190,7 @@ int main()
 	sporeShader.setUniform("textureSize", (sf::Vector2f)sporeTexture.getSize());
 	sporeShader.setUniform("texture", sporeTexture);
 
-
-
-
-
-
-
+	std::vector<Spore> spores(MAX_SPORES, Spore(&sporeTexture, &sporeShader, sf::Vector2f{0.f, 0.f}, sf::Vector2f{ 0.f, 0.f }));
 
 	Level level;
 	const uint32_t desiredNumSkyscrapers = 30;
@@ -225,7 +221,8 @@ int main()
 	uint8_t playerToThrow = 0;
 	int playerWon = -1;
 	float shroomingSpeed = 32;
-	int shroomIdx = 0;
+	size_t shroomIdx = 0;
+	size_t sporeIdx = 0;
 
  	while (window.isOpen())
 	{
@@ -270,6 +267,10 @@ int main()
 					for (int i = 0; i < MAX_SHROOMS; ++i)
 						shrooms[i].visible = false;
 					shroomIdx = 0;
+					for (int i = 0; i < MAX_SPORES; ++i)
+						spores[i].visible = false;
+					sporeIdx = 0;
+
 					for (auto bit = bananas.begin(); bit != bananas.end();)
 						bit = bananas.erase(bit);
 					level.generateSkyline(width, height, desiredNumSkyscrapers);
@@ -374,11 +375,13 @@ int main()
 						for (int i = 0; i < 10; ++i)
 						{
 							float rand = 3.14159f * distributionBetweenZeroAndOne(generator);
-							spores.emplace_back(&sporeTexture,
-								&sporeShader,
-								sf::Vector2f{ shroom.mySprite.getPosition().x, 2.9f * shroom.mySprite.getPosition().y / 3 },
-								sf::Vector2f{ 7.5f * cosf(rand), -15.f * sinf(rand) });
+							spores[sporeIdx].sporeSprite.setPosition(sf::Vector2f{ shroom.mySprite.getPosition().x, 2.9f * shroom.mySprite.getPosition().y / 3 });
+							spores[sporeIdx].velocity = sf::Vector2f{ 7.5f * cosf(rand), -15.f * sinf(rand) };
+							spores[sporeIdx].visible = true;
+							sporeIdx++;
+							if (sporeIdx > MAX_SPORES) sporeIdx = 0;
 						}
+						// TODO Add reset functionality on all entities!!
 						shroom.sporeReleaseCounter = 0;
 						// Hmmm....?!
 						// AHA! Erasing actually does not work... CPP is insane... fuck :D
@@ -391,41 +394,44 @@ int main()
 			}
 
 			// tEh Spores are coming for you!!
-			for (auto sporeIterator = spores.begin(); sporeIterator != spores.end();)
+			for (size_t localSporeIdx = 0; localSporeIdx < MAX_SPORES; ++localSporeIdx)
 			{
-				auto& spore = *sporeIterator;
-				spore.update(0.5f);
-				auto sporePos = spore.sporeSprite.getPosition();
-				if (level.isBelowSkyline(sporePos))
-				{		
-					bool closeToOtherShroom = false;
-					for (int i = 0; i < MAX_SHROOMS; ++i)
+				auto& spore = spores[localSporeIdx];
+				if (spore.visible)
+				{
+					spore.update(0.5f);
+					auto sporePos = spore.sporeSprite.getPosition();
+					if (level.isBelowSkyline(sporePos))
 					{
-						if (shrooms[i].visible && abs(shrooms[i].mySprite.getPosition().x - sporePos.x) < 10.f)
+						bool closeToOtherShroom = false;
+						for (int i = 0; i < MAX_SHROOMS; ++i)
 						{
-							closeToOtherShroom = true;
-							break;
+							if (shrooms[i].visible && abs(shrooms[i].mySprite.getPosition().x - sporePos.x) < 10.f)
+							{
+								closeToOtherShroom = true;
+								break;
+							}
 						}
+						if (!closeToOtherShroom && sporePos.y < height / 2)
+						{
+							float rand = distributionBetweenZeroAndOne(generator);
+							// 20% chance of new shroom kurwa!!
+							if (rand > 0.8)
+							{
+								auto newShroomPos = getShroomAtHighestYPoint(sporePos, level);
+								shrooms[shroomIdx] = Shroom(newShroomPos, pSingleShroomTexture, 1, &shroomShader);
+								shrooms[shroomIdx].visible = true;
+								// TODO Crash because out of range but also need to vectorize spores as well as rest of entities!!
+								// Arenas all the way!
+								shroomIdx++;
+							}
+						}
+						spore.visible = false;
+						continue;
 					}
-					if (!closeToOtherShroom && sporePos.y < height / 2)
-					{
-						float rand = distributionBetweenZeroAndOne(generator);
-						// 20% chance of new shroom kurwa!!
-						if (rand > 0.8)
-						{
-							auto newShroomPos = getShroomAtHighestYPoint(sporePos, level);
-							shrooms[shroomIdx] = Shroom(newShroomPos, pSingleShroomTexture, 1, &shroomShader);
-							shrooms[shroomIdx].visible = true;
-							// TODO Crash because out of range but also need to vectorize spores as well as rest of entities!!
-							// Arenas all the way!
-							shroomIdx++;
-						}
-					}					
-					sporeIterator = spores.erase(sporeIterator);
-					continue;
+					spore.draw(window);					
+
 				}
-				spore.draw(window);
-				sporeIterator++;
 			}
 
 
